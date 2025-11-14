@@ -1,0 +1,9 @@
+{
+    "julia.debuggerDefaultCompiled": [
+        "ALL_MODULES_EXCEPT_MAIN",   
+        "-FjordsSim.",   
+        "-Oceananigans.",
+        "-ClimaOcean.",
+    ],
+    "julia.lint.call": false,
+}

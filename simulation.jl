@@ -17,12 +17,12 @@ function parse_commandline()
         "--grid_path"
             help = "Path to the bathymetry NetCDF file."
             arg_type = String
-            default = joinpath(homedir(), "FjordsSim_data", "oslofjord", "OF_inner_105to232_bathymetry_v3.nc")
+            default = joinpath(homedir(), "FjordsSim_data", "oslofjord", "bathymetry_105to232.nc")
 
         "--forcing_path"
             help = "Path to the forcing NetCDF file."
             arg_type = String
-            default = joinpath(homedir(), "FjordsSim_data", "oslofjord", "OF_inner_105to232_forcing_v2.nc")
+            default = joinpath(homedir(), "FjordsSim_data", "oslofjord", "forcing_105to232.nc")
 
         "--atmospheric_forcing_path"
             help = "Path to the atmospheric JRA55 forcing directory."
@@ -66,8 +66,12 @@ function main()
         filepath=args["forcing_path"],
         tracers=tracers,
     )
-    tbbc = top_bottom_boundary_conditions(; grid=grid, bottom_drag_coefficient=0.003)
-    boundary_conditions = map(x -> FieldBoundaryConditions(; x...), tbbc)
+    tbbc = top_bottom_boundary_conditions(;
+            grid=grid,
+            bottom_drag_coefficient=0.003,
+        )
+    sobc = (v = (south = OpenBoundaryCondition(nothing),),)
+    boundary_conditions = map(x -> FieldBoundaryConditions(;x...), recursive_merge(tbbc, sobc))
     atmosphere = JRA55PrescribedAtmosphere(arch, FT;
         latitude=(58.98, 59.94),
         longitude=(10.18, 11.03),
