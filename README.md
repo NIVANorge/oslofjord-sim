@@ -2,46 +2,30 @@
 
 ## Data preparation
 
-In the preprocess folder one can find Python Jupyter notebook preprocessing scripts to prepare:
-A grid file;
-Forcing file containig array for boundary conditions, rivers, etc.;
-Atmospheric forcing files.
+In the preprocess folder there are Python Jupyter notebook preprocessing scripts to make:
+- A grid file;
+- Forcing file containing for boundary conditions, rivers, etc.;
+- Atmospheric forcing files (todo).
 
 ## Installation
 
 Python:
-
 1. Install conda <https://conda-forge.org/download/>.
 2. Create a conda environment `conda create --name oslofjord python=3.12`
 3. Activate the envoronment `conda activate oslofjord`
 4. Navigate to the oslofjord directory
 5. Install the dependencies `pip install -e .`
-6. For some cases xesmf is required, see <https://xesmf.readthedocs.io/en/stable/installation.html>;
+6. Xesmf is required, see <https://xesmf.readthedocs.io/en/stable/installation.html>;
    install with `conda install -c conda-forge xesmf`.
 
 Julia:
-
 1. Install julia <https://julialang.org/downloads/>.
-2. Run Julia REPL from the directory with `Project.toml` and activate the FjordsSim environment `julia --project=.`.
+2. Run Julia REPL from the directory with `Project.toml` and activate the FjordsSim environment `julia --project`.
 3. Enter the Pkg REPL by pressing `]` from Julia REPL.
 4. Type `instantiate` to 'resolve' a `Manifest.toml` from a `Project.toml` to install and precompile dependency packages.
 
-One of the options to run a FjordsSim simulation requires 2 files:
+## Usage
 
-- A bathymetry netcdf file.
-It should contain a 2d array variable "h" with depths (they should be negative),
-Two 1d arrays with "lat" and "lon" corresponding to depths in variable "h",
-a 1d array "z_faces" with the desired layer depths (also negative values).
-
-- A forcing netcdf file.
-This file contains the information about the forcing fields.
-To 'force' any variable, one need to define two 4d arrays called, for example, "T" and "T_lambda".
-"T" is an oceananigans name for temperature, lets use it further as example;
-it is possible to provide forcing for any variable defined in an oceananigans simulation.
-Spatial dimensions should have the shape of the corresponding [stagerred grid](https://clima.github.io/OceananigansDocumentation/stable/fields/#Staggered-grids-and-field-locations).
-The forth dimension is time in seconds, in Python one can use a datetime format.
-"T_lambda" defines a type of forcing to be used in a simulation.
-"T" value should correspond to "T_lambda".
-If 0 < "T_lambda" < 1, [relaxation](https://clima.github.io/OceananigansDocumentation/stable/model_setup/forcing_functions/#Relaxation) is used.
-If "T_lambda" > 1, horizontal flux in "T" should be provided.
-If "T_lambda" < -1, vertical flux in "T" should be provided.
+1. Download the [initial grid (OF160_grid_v2.nc) and atmospheric forcing files](https://www.dropbox.com/scl/fo/gc3yc155b5eohi7998wgh/AGN2Yt3HyQ0LlZGImpcca6o?rlkey=x6okc3uxe2avud6sbxgd00l14&st=093llyqp&dl=0).
+2. Use scripts in the preprocess folder to download and prepare the bathymetry and forcing files.
+3. Run simulation `julia --project simulation.jl`
