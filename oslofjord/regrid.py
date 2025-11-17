@@ -223,6 +223,60 @@ def replace_surrounded_values(arr, sides=3):
     return new_arr
 
 
+def fill_diagonal_pairs(arr):
+    a = arr.copy()
+
+    # Extract all 2×2 blocks using slicing
+    tl = a[:-1, :-1]   # top-left
+    tr = a[:-1,  1:]   # top-right
+    bl = a[ 1:, :-1]   # bottom-left
+    br = a[ 1:,  1:]   # bottom-right
+
+    # Condition:
+    # TL and BR are floats, TR and BL are NaN
+    cond = (
+        (~np.isnan(tl)) &
+        (~np.isnan(br)) &
+        ( np.isnan(tr)) &
+        ( np.isnan(bl))
+    )
+
+    # Compute fill value
+    fill_val = (tl + br) / 2.0
+
+    # Apply to the upper-right cell of each 2×2 block
+    a[:-1, 1:][cond] = fill_val[cond]
+
+    return a
+
+
+def fill_secondary_diagonal_pairs(arr):
+    a = arr.copy()
+
+    # Extract all 2×2 slices
+    tl = a[:-1, :-1]   # top-left
+    tr = a[:-1,  1:]   # top-right
+    bl = a[ 1:, :-1]   # bottom-left
+    br = a[ 1:,  1:]   # bottom-right
+
+    # Condition for secondary diagonal:
+    # TR and BL are floats, TL and BR are NaN
+    cond = (
+        (~np.isnan(tr)) &
+        (~np.isnan(bl)) &
+        ( np.isnan(tl)) &
+        ( np.isnan(br))
+    )
+
+    # Value to insert = average of (TR, BL)
+    fill_val = (tr + bl) / 2.0
+
+    # Fill the TOP-LEFT cell of each matching block
+    a[:-1, :-1][cond] = fill_val[cond]
+
+    return a
+
+
 def replace_surrounded_and_clusters(arr, cluster=1):
     new_arr = arr.copy()
     rows, cols = arr.shape
