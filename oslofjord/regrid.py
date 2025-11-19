@@ -1,5 +1,6 @@
 import numpy as np
 import xesmf as xe
+from scipy import ndimage
 from scipy.interpolate import interp1d
 
 
@@ -10,6 +11,23 @@ def tranform_to_z(ds):
     zo_rho = (ds.hc * ds.s_rho + ds.Cs_r * ds.h) / (ds.hc + ds.h)
     z_rho = ds.zeta + (ds.zeta + ds.h) * zo_rho
     return z_rho.transpose()
+
+
+def fill_nans_with_nearest(da):
+    """Fill NaNs in an xarray DataArray with nearest non-NaN values."""
+
+    # mask: 1 where data is NaN, 0 elsewhere
+    nan_mask = np.isnan(da.values)
+
+    # distance transform returns:
+    #  - distances
+    #  - indices of nearest non-NaN pixel along each axis
+    dist, idx = ndimage.distance_transform_edt(nan_mask, return_indices=True)
+
+    # use advanced indexing to build the filled array
+    filled = da.values[tuple(idx)]
+
+    return filled
 
 
 def regrid_depths(values, depths, target_depths):
@@ -187,15 +205,15 @@ def fill_surrounded_nans(arr):
     for i in range(1, rows - 1):
         for j in range(1, cols - 1):
             if np.isnan(arr[i, j]):
-                west  = arr[i, j - 1]
+                west = arr[i, j - 1]
                 north = arr[i - 1, j]
-                east  = arr[i, j + 1]
+                east = arr[i, j + 1]
                 south = arr[i + 1, j]
 
                 # Check if all 4 neighbors are NOT NaN
                 if not np.isnan(west) and not np.isnan(north) and not np.isnan(east) and not np.isnan(south):
                     result[i, j] = np.mean([west, north, east, south])
-    
+
     return result
 
 
@@ -227,19 +245,14 @@ def fill_diagonal_pairs(arr):
     a = arr.copy()
 
     # Extract all 2×2 blocks using slicing
-    tl = a[:-1, :-1]   # top-left
-    tr = a[:-1,  1:]   # top-right
-    bl = a[ 1:, :-1]   # bottom-left
-    br = a[ 1:,  1:]   # bottom-right
+    tl = a[:-1, :-1]  # top-left
+    tr = a[:-1, 1:]  # top-right
+    bl = a[1:, :-1]  # bottom-left
+    br = a[1:, 1:]  # bottom-right
 
     # Condition:
     # TL and BR are floats, TR and BL are NaN
-    cond = (
-        (~np.isnan(tl)) &
-        (~np.isnan(br)) &
-        ( np.isnan(tr)) &
-        ( np.isnan(bl))
-    )
+    cond = (~np.isnan(tl)) & (~np.isnan(br)) & (np.isnan(tr)) & (np.isnan(bl))
 
     # Compute fill value
     fill_val = (tl + br) / 2.0
@@ -254,19 +267,14 @@ def fill_secondary_diagonal_pairs(arr):
     a = arr.copy()
 
     # Extract all 2×2 slices
-    tl = a[:-1, :-1]   # top-left
-    tr = a[:-1,  1:]   # top-right
-    bl = a[ 1:, :-1]   # bottom-left
-    br = a[ 1:,  1:]   # bottom-right
+    tl = a[:-1, :-1]  # top-left
+    tr = a[:-1, 1:]  # top-right
+    bl = a[1:, :-1]  # bottom-left
+    br = a[1:, 1:]  # bottom-right
 
     # Condition for secondary diagonal:
     # TR and BL are floats, TL and BR are NaN
-    cond = (
-        (~np.isnan(tr)) &
-        (~np.isnan(bl)) &
-        ( np.isnan(tl)) &
-        ( np.isnan(br))
-    )
+    cond = (~np.isnan(tr)) & (~np.isnan(bl)) & (np.isnan(tl)) & (np.isnan(br))
 
     # Value to insert = average of (TR, BL)
     fill_val = (tr + bl) / 2.0
