@@ -1,10 +1,10 @@
-# Oslofjord simulation
+# Oslofjord simulation with FjordSim
 
 ## Data preparation
 
-In the preprocess folder there are Python Jupyter notebook preprocessing scripts to make:
+In the preprocess folder there are Python Jupyter notebooks to make:
 - A grid file;
-- Forcing file containing for boundary conditions, rivers, etc.;
+- Forcing file for boundary conditions, rivers, etc.;
 - Atmospheric forcing files (todo).
 
 ## Installation

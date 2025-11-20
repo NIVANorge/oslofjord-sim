@@ -3,7 +3,7 @@ using Oceananigans
 using Oceananigans.Units
 using ClimaOcean
 using SeawaterPolynomials.TEOS10
-using FjordsSim
+using FjordSim
 using ArgParse
 
 const FT = Oceananigans.defaults.FloatType
@@ -17,22 +17,22 @@ function parse_commandline()
         "--grid_path"
             help = "Path to the bathymetry NetCDF file."
             arg_type = String
-            default = joinpath(homedir(), "FjordsSim_data", "oslofjord", "bathymetry_105to232.nc")
+            default = joinpath(homedir(), "FjordSim_data", "oslofjord", "bathymetry_105to232.nc")
 
         "--forcing_path"
             help = "Path to the forcing NetCDF file."
             arg_type = String
-            default = joinpath(homedir(), "FjordsSim_data", "oslofjord", "forcing_105to232.nc")
+            default = joinpath(homedir(), "FjordSim_data", "oslofjord", "forcing_105to232.nc")
 
         "--atmospheric_forcing_path"
             help = "Path to the atmospheric JRA55 forcing directory."
             arg_type = String
-            default = joinpath(homedir(), "FjordsSim_data", "JRA55")
+            default = joinpath(homedir(), "FjordSim_data", "JRA55")
 
         "--results_path"
             help = "Directory where results are stored."
             arg_type = String
-            default = joinpath(homedir(), "FjordsSim_results", "oslofjord")
+            default = joinpath(homedir(), "FjordSim_results", "oslofjord")
     end
     return parse_args(s)
 end

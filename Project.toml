@@ -1,7 +1,7 @@
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 ClimaOcean = "0376089a-ecfe-4b0e-a64f-9c555d74d754"
-FjordsSim = "70d6b63c-c5d4-46ce-8d1e-8766361373eb"
+FjordSim = "70d6b63c-c5d4-46ce-8d1e-8766361373eb"
 Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
 SeawaterPolynomials = "d496a93d-167e-4197-9f49-d3af4ff8fe40"
 
