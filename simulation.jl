@@ -6,6 +6,9 @@ using SeawaterPolynomials.TEOS10
 using FjordSim
 using ArgParse
 
+include("Oxydep.jl")
+using .OXYDEPModel
+
 const FT = Oceananigans.defaults.FloatType
 
 # ----------------------------------------------------------
@@ -15,24 +18,24 @@ function parse_commandline()
     s = ArgParseSettings()
     @add_arg_table! s begin
         "--grid_path"
-            help = "Path to the bathymetry NetCDF file."
-            arg_type = String
-            default = joinpath(homedir(), "FjordSim_data", "oslofjord", "bathymetry_105to232.nc")
+        help = "Path to the bathymetry NetCDF file."
+        arg_type = String
+        default = joinpath(homedir(), "FjordSim_data", "oslofjord", "bathymetry_105to232.nc")
 
         "--forcing_path"
-            help = "Path to the forcing NetCDF file."
-            arg_type = String
-            default = joinpath(homedir(), "FjordSim_data", "oslofjord", "forcing_105to232.nc")
+        help = "Path to the forcing NetCDF file."
+        arg_type = String
+        default = joinpath(homedir(), "FjordSim_data", "oslofjord", "forcing_105to232.nc")
 
         "--atmospheric_forcing_path"
-            help = "Path to the atmospheric JRA55 forcing directory."
-            arg_type = String
-            default = joinpath(homedir(), "FjordSim_data", "JRA55")
+        help = "Path to the atmospheric JRA55 forcing directory."
+        arg_type = String
+        default = joinpath(homedir(), "FjordSim_data", "JRA55")
 
         "--results_path"
-            help = "Directory where results are stored."
-            arg_type = String
-            default = joinpath(homedir(), "FjordSim_results", "oslofjord")
+        help = "Directory where results are stored."
+        arg_type = String
+        default = joinpath(homedir(), "FjordSim_results", "oslofjord")
     end
     return parse_args(s)
 end
@@ -55,10 +58,25 @@ function main()
         TKEDissipationVerticalDiffusivity(minimum_tke=7e-6),
         Oceananigans.TurbulenceClosures.HorizontalScalarBiharmonicDiffusivity(ν=15, κ=10),
     )
-    tracer_advection = (T=WENO(), S=WENO(), e=nothing, ϵ=nothing)
+    # tracer_advection = (T=WENO(), S=WENO(), e=nothing, ϵ=nothing)
+    tracer_advection = (
+        T=WENO(),
+        S=WENO(),
+        C=WENO(),
+        e=nothing,
+        ϵ=nothing,
+        NUT=WENO(),
+        P=WENO(),
+        HET=WENO(),
+        POM=WENO(),
+        DOM=WENO(),
+        O₂=WENO(),
+    )
     momentum_advection = WENOVectorInvariant(FT)
-    tracers = (:T, :S, :e, :ϵ)
-    initial_conditions = (T=5.0, S=33.0)
+    # tracers = (:T, :S, :e, :ϵ)
+    tracers = (:T, :S, :e, :ϵ, :C, :NUT, :P, :HET, :POM, :DOM, :O₂)
+    # initial_conditions = (T=5.0, S=33.0)
+    initial_conditions = (T = 5.0, S = 33.0, C = 0.0, NUT = 10.0, P = 0.05, HET = 0.01, O₂ = 200.0, DOM = 1.0)
     free_surface = SplitExplicitFreeSurface(grid, cfl=0.7)
     coriolis = HydrostaticSphericalCoriolis(FT)
     forcing = forcing_from_file(;
@@ -67,11 +85,14 @@ function main()
         tracers=tracers,
     )
     tbbc = top_bottom_boundary_conditions(;
-            grid=grid,
-            bottom_drag_coefficient=0.003,
-        )
-    sobc = (v = (south = OpenBoundaryCondition(nothing),),)
-    boundary_conditions = map(x -> FieldBoundaryConditions(;x...), recursive_merge(tbbc, sobc))
+        grid=grid,
+        bottom_drag_coefficient=0.003,
+    )
+    sobc = (v=(south=OpenBoundaryCondition(nothing),),)
+    boundary_conditions = map(x -> FieldBoundaryConditions(; x...), recursive_merge(tbbc, sobc))
+    # biogeochemistry = nothing
+    biogeochemistry = OXYDEP(grid)
+    boundary_conditions = merge(boundary_conditions, bgh_oxydep_boundary_conditions(biogeochemistry, grid.Nz))
     atmosphere = JRA55PrescribedAtmosphere(arch, FT;
         latitude=(58.98, 59.94),
         longitude=(10.18, 11.03),
@@ -82,7 +103,6 @@ function main()
         ocean_albedo=0.1
     )
     sea_ice = FreezingLimitedOceanTemperature()
-    biogeochemistry = nothing
     results_dir = args["results_path"]
     stop_time = 365days
 
@@ -106,7 +126,7 @@ function main()
         stop_time,
     )
 
-    simulation.callbacks[:progress] = Callback(progress, TimeInterval(1hour))
+    simulation.callbacks[:progress] = Callback(progress, TimeInterval(6hours))
 
     ocean_sim = simulation.model.ocean
     ocean_model = ocean_sim.model
@@ -117,12 +137,18 @@ function main()
         (
             T=ocean_model.tracers.T,
             S=ocean_model.tracers.S,
+            NUT=ocean_model.tracers.NUT,
+            P=ocean_model.tracers.P,
+            HET=ocean_model.tracers.HET,
+            POM=ocean_model.tracers.POM,
+            DOM=ocean_model.tracers.DOM,
+            O₂=ocean_model.tracers.O₂,
             u=ocean_model.velocities.u,
             v=ocean_model.velocities.v,
         );
-        filename = "$prefix",
-        schedule = TimeInterval(1hour),
-        overwrite_existing = true,
+        filename="$prefix",
+        schedule=TimeInterval(6hours),
+        overwrite_existing=true,
     )
 
     conjure_time_step_wizard!(simulation; cfl=0.1, max_Δt=3minutes, max_change=1.01)

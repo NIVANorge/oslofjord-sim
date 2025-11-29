@@ -1,12 +1,14 @@
 [deps]
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 ClimaOcean = "0376089a-ecfe-4b0e-a64f-9c555d74d754"
 FjordSim = "70d6b63c-c5d4-46ce-8d1e-8766361373eb"
+OceanBioME = "a49af516-9db8-4be4-be45-1dad61c5a376"
 Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
 SeawaterPolynomials = "d496a93d-167e-4197-9f49-d3af4ff8fe40"
 
 [compat]
 ClimaOcean = "0.8.7"
+FjordSim = "0.0.1"
 Oceananigans = "0.100.7"
 SeawaterPolynomials = "0.3.10"
-FjordSim = "0.0.1"
