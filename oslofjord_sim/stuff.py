@@ -1,7 +1,12 @@
+import xml.etree.ElementTree as ET
+
 import numpy as np
+import requests
 import xesmf as xe
 from scipy import ndimage
 from scipy.interpolate import interp1d
+
+CATALOG_URL = "https://thredds.met.no/thredds/catalog/fou-hi/norkyst800m/catalog.xml"
 
 
 def tranform_to_z(ds):
@@ -58,7 +63,7 @@ def regrid_depths(values, depths, target_depths):
     return interpolated_values
 
 
-def regrid_from_norkyst(ds_in, ds_out_c, ds_out_u, ds_out_v, target_depths):
+def regrid_from_norkyst(regridder_rho, regridder_u, regridder_v, ds_in, ds_out_c, ds_out_u, ds_out_v, target_depths):
     """
     Regrids norkyst output file from
     https://thredds.met.no/thredds/catalog/fou-hi/norkyst800m/catalog.html
@@ -85,9 +90,12 @@ def regrid_from_norkyst(ds_in, ds_out_c, ds_out_u, ds_out_v, target_depths):
     )
 
     """
-    regridder_rho = xe.Regridder(ds_in, ds_out_c, "bilinear", unmapped_to_nan=True)
-    regridder_u = xe.Regridder(ds_in, ds_out_u, "bilinear", unmapped_to_nan=True)
-    regridder_v = xe.Regridder(ds_in, ds_out_v, "bilinear", unmapped_to_nan=True)
+    if regridder_rho is None:
+        regridder_rho = xe.Regridder(ds_in, ds_out_c, "bilinear", unmapped_to_nan=True)
+    if regridder_u is None:
+        regridder_u = xe.Regridder(ds_in, ds_out_u, "bilinear", unmapped_to_nan=True)
+    if regridder_v is None:
+        regridder_v = xe.Regridder(ds_in, ds_out_v, "bilinear", unmapped_to_nan=True)
 
     da_temp = regridder_rho(ds_in["temperature"])
     da_salt = regridder_rho(ds_in["salinity"])
@@ -130,7 +138,7 @@ def regrid_from_norkyst(ds_in, ds_out_c, ds_out_u, ds_out_v, target_depths):
 
     np_time = ds_in.time.values
 
-    return np_time, np_temp, np_salt, np_u, np_v
+    return regridder_rho, regridder_u, regridder_v, np_time, np_temp, np_salt, np_u, np_v
 
 
 def regrid_from_roms(ds_in, ds_out_c, ds_out_u, ds_out_v, target_depths):
@@ -338,3 +346,20 @@ def replace_surrounded_and_clusters(arr, cluster=1):
     new_arr = check_and_replace_clusters(new_arr, axis=0)  # Vertical check
 
     return new_arr
+
+
+def list_opendap_files(base_url=CATALOG_URL):
+    response = requests.get(base_url)
+
+    if response.status_code != 200:
+        print("Failed to retrieve the directory listing.")
+        return []
+
+    root = ET.fromstring(response.content)
+    files = [
+        elem.attrib["name"]
+        for elem in root.findall(".//{http://www.unidata.ucar.edu/namespaces/thredds/InvCatalog/v1.0}dataset")
+        if elem.attrib["name"].endswith(".nc")
+    ]
+
+    return files

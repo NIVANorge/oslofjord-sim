@@ -5,9 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: download norkyst",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/preprocess/download_norkyst.py",
+            "console": "integratedTerminal"
+        },
+        {
             "type": "julia",
             "request": "launch",
-            "name": "Oslofjord",
+            "name": "Julia: Oslofjord simulation",
             "program": "${workspaceFolder}/simulation.jl",
             "stopOnEntry": false,
             "juliaAdditionalArgs": [
