@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 import requests
+import xarray as xr
 import xesmf as xe
 from scipy import ndimage
 from scipy.interpolate import interp1d
@@ -363,6 +364,87 @@ def list_opendap_files(base_url=CATALOG_URL):
     ]
 
     return files
+
+
+def reformat_river_dataset(ds_rivers):
+    river_values = ds_rivers.river.values
+    properties = list(ds_rivers.data_vars)
+    river_list = []
+    for river_val in river_values:
+        # Select data for this specific river
+        river_data = ds_rivers.sel(river=river_val)
+
+        # Stack all data variables into a single array along the 'properties' dimension
+        river_arrays = []
+        for var_name in properties:
+            # Drop the 'river' coordinate to avoid conflicts
+            river_arrays.append(river_data[var_name].drop_vars("river", errors="ignore"))
+
+        # Combine into a single DataArray with 'properties' as a new dimension
+        river_da = xr.concat(river_arrays, dim="properties")
+        river_list.append(river_da)
+
+    # Concatenate all rivers along a new 'river_number' dimension
+    rivers_combined = xr.concat(river_list, dim="river_number")
+    return xr.Dataset({"rivers": rivers_combined}).assign_coords(properties=properties, river_number=river_values)
+
+
+def add_river_coordinates(ds_rivers, df_rivers):
+    # Extract geographical coordinates from df_rivers
+    # Match river_number in ds_rivers with 'River number' in df_rivers
+    lat_coords = []
+    lon_coords = []
+    for river_num in ds_rivers.river_number.values:
+        # Convert river_num to int for matching
+        river_row = df_rivers[df_rivers["River number"] == int(river_num)]
+        if len(river_row) > 0:
+            lat_coords.append(river_row["LatOutlet"].values[0])
+            lon_coords.append(river_row["LonOutlet"].values[0])
+        else:
+            # If river not found, use NaN
+            lat_coords.append(np.nan)
+            lon_coords.append(np.nan)
+
+    # Add coordinates to ds_rivers
+    return ds_rivers.assign_coords(LatOutlet=("river_number", lat_coords), LonOutlet=("river_number", lon_coords))
+
+
+def get_river_indices(ds, ds_rivers, surface_mask):
+    river_indices = {}
+    for river_num in ds_rivers.river_number.values:
+        ds_river = ds_rivers.sel(river_number=river_num)
+        lat, lon = ds_river.LatOutlet.values, ds_river.LonOutlet.values
+        if lat <= ds.Ny.values.min() or lat >= ds.Ny.values.max():
+            print(
+                f"Processing river {(int(river_num),)} validity: "
+                f"{lat} is outside of {ds.Ny.values.min()}; {ds.Ny.values.max()}"
+            )
+            continue
+        if lon <= ds.Nx.values.min() or lon >= ds.Nx.values.max():
+            print(
+                f"Processing river {(int(river_num),)} validity: "
+                f"{lon} is outside of {ds.Nx.values.min()}; {ds.Nx.values.max()}"
+            )
+            continue
+        Ny_idx = np.argmin(np.abs(ds.Ny.values - lat))
+        Nx_idx = np.argmin(np.abs(ds.Nx.values - lon))
+        is_valid, message = is_valid_water_cell(surface_mask, Ny_idx, Nx_idx)
+        print(f"Processing river {(int(river_num),)} validity: {is_valid}, message: {message}")
+        if not is_valid:
+            Ny_valid, Nx_valid, distance = find_closest_valid_water_cell(surface_mask, Ny_idx, Nx_idx)
+            if Ny_valid is not None and Nx_valid is not None:
+                print(
+                    f"River {(int(river_num),)} original location ({Ny_idx}, {Nx_idx}) is invalid. "
+                    f"Closest valid water cell found at ({Ny_valid}, {Nx_valid}) with distance {distance:.2f}."
+                )
+                Ny_idx, Nx_idx = Ny_valid, Nx_valid
+            else:
+                print(
+                    f"River {(int(river_num),)} original location ({Ny_idx}, {Nx_idx}) is invalid. "
+                    f"No valid water cell found within search radius."
+                )
+        river_indices[int(river_num)] = (Ny_idx, Nx_idx)
+    return river_indices
 
 
 def is_valid_water_cell(mask, ny, nx):
