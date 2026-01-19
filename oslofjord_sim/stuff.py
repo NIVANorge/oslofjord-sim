@@ -363,3 +363,79 @@ def list_opendap_files(base_url=CATALOG_URL):
     ]
 
     return files
+
+
+def is_valid_water_cell(mask, ny, nx):
+    """Check if (ny, nx) is a valid water cell.
+
+    Valid water cell: value is 1 and has at least one nearby cell with value 0
+    """
+    # Check bounds
+    if ny < 0 or ny >= mask.shape[0] or nx < 0 or nx >= mask.shape[1]:
+        return False, "Index out of bounds"
+
+    # Check if current cell is 1 (water)
+    if mask[ny, nx] != 1:
+        return False, f"Cell value is {mask[ny, nx]}, expected 1 for water"
+
+    # Check 8 neighboring cells for at least one with value 1
+    neighbors = []
+    for dy in [-1, 0, 1]:
+        for dx in [-1, 0, 1]:
+            if dy == 0 and dx == 0:
+                continue  # Skip the center cell
+            ny_neighbor = ny + dy
+            nx_neighbor = nx + dx
+            if 0 <= ny_neighbor < mask.shape[0] and 0 <= nx_neighbor < mask.shape[1]:
+                neighbors.append(mask[ny_neighbor, nx_neighbor])
+
+    has_boundary = any(n == 0 for n in neighbors)
+
+    if not has_boundary:
+        return False, "No neighboring cell with value 0 (not at water boundary)"
+
+    return True, "Valid water cell at boundary"
+
+
+def find_closest_valid_water_cell(mask, ny, nx, max_search_radius=10):
+    """Find the closest valid water cell to (ny, nx).
+
+    Args:
+        mask: 2D numpy array with mask values
+        ny: y-index (row) of the original cell
+        nx: x-index (column) of the original cell
+        max_search_radius: maximum search distance in grid cells
+
+    Returns:
+        tuple: (ny_valid, nx_valid, distance) if found, or (None, None, None) if no valid cell found
+    """
+    # Check if the current cell is already valid
+    is_valid, _ = is_valid_water_cell(mask, ny, nx)
+    if is_valid:
+        return ny, nx, 0
+
+    # Search in expanding circles
+    for radius in range(1, max_search_radius + 1):
+        # Generate all points at this radius (roughly circular search)
+        candidates = []
+        for dy in range(-radius, radius + 1):
+            for dx in range(-radius, radius + 1):
+                # Only check points roughly at this radius
+                distance = np.sqrt(dy**2 + dx**2)
+                if radius - 0.5 <= distance <= radius + 0.5:
+                    ny_candidate = ny + dy
+                    nx_candidate = nx + dx
+
+                    # Check if this candidate is valid
+                    is_valid, _ = is_valid_water_cell(mask, ny_candidate, nx_candidate)
+                    if is_valid:
+                        candidates.append((ny_candidate, nx_candidate, distance))
+
+        # If we found valid candidates at this radius, return the closest one
+        if candidates:
+            # Sort by actual distance and return the closest
+            candidates.sort(key=lambda x: x[2])
+            return candidates[0]
+
+    # No valid cell found within max_search_radius
+    return None, None, None
