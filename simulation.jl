@@ -76,7 +76,7 @@ function main()
     # tracers = (:T, :S, :e, :ϵ)
     tracers = (:T, :S, :e, :ϵ, :C, :NUT, :P, :HET, :POM, :DOM, :O₂)
     # initial_conditions = (T=5.0, S=33.0)
-    initial_conditions = (T = 5.0, S = 33.0, C = 0.0, NUT = 10.0, P = 0.05, HET = 0.01, O₂ = 200.0, DOM = 1.0)
+    initial_conditions = (T = 5.0, S = 33.0, C = 0.0, NUT = 0.01, P = 0.01, HET = 0.01, O₂ = 200.0, DOM = 1.0)
     free_surface = SplitExplicitFreeSurface(grid, cfl=0.7)
     coriolis = HydrostaticSphericalCoriolis(FT)
     forcing = forcing_from_file(;
@@ -143,6 +143,7 @@ function main()
             POM=ocean_model.tracers.POM,
             DOM=ocean_model.tracers.DOM,
             O₂=ocean_model.tracers.O₂,
+            C=ocean_model.tracers.C,
             u=ocean_model.velocities.u,
             v=ocean_model.velocities.v,
         );
