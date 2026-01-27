@@ -28,7 +28,7 @@ function parse_commandline()
         default = joinpath(homedir(), "FjordSim_data", "oslofjord", "forcing_105to232.nc")
 
         "--atmospheric_forcing_path"
-        help = "Path to the atmospheric JRA55 forcing directory."
+        help = "Path to the atmospheric forcing directory."
         arg_type = String
         default = joinpath(homedir(), "FjordSim_data", "JRA55")
 
@@ -58,7 +58,6 @@ function main()
         TKEDissipationVerticalDiffusivity(minimum_tke=7e-6),
         Oceananigans.TurbulenceClosures.HorizontalScalarBiharmonicDiffusivity(ν=15, κ=10),
     )
-    # tracer_advection = (T=WENO(), S=WENO(), e=nothing, ϵ=nothing)
     tracer_advection = (
         T=WENO(),
         S=WENO(),
@@ -73,10 +72,27 @@ function main()
         O₂=WENO(),
     )
     momentum_advection = WENOVectorInvariant(FT)
-    # tracers = (:T, :S, :e, :ϵ)
     tracers = (:T, :S, :e, :ϵ, :C, :NUT, :P, :HET, :POM, :DOM, :O₂)
-    # initial_conditions = (T=5.0, S=33.0)
     initial_conditions = (T = 5.0, S = 33.0, C = 0.0, NUT = 0.01, P = 0.01, HET = 0.01, O₂ = 200.0, DOM = 1.0)
+    # dataset = DSResults(
+    #     "snapshots_ocean.nc",
+    #     joinpath(homedir(), "FjordSim_results", "oslofjord");
+    #     start_date_time = DateTime(2025, 1, 1),
+    # )
+    # initial_conditions = (
+    #     T = Metadatum(:temperature; dataset, date = last_date(dataset, :temperature)),
+    #     S = Metadatum(:salinity; dataset, date = last_date(dataset, :salinity)),
+    #     u = Metadatum(
+    #         :u_velocity;
+    #         dataset,
+    #         date = last_date(dataset, :u_velocity),
+    #     ),
+    #     v = Metadatum(
+    #         :v_velocity;
+    #         dataset,
+    #         date = last_date(dataset, :v_velocity),
+    #     ),
+    # )
     free_surface = SplitExplicitFreeSurface(grid, cfl=0.7)
     coriolis = HydrostaticSphericalCoriolis(FT)
     forcing = forcing_from_file(;
@@ -90,7 +106,6 @@ function main()
     )
     sobc = (v=(south=OpenBoundaryCondition(nothing),),)
     boundary_conditions = map(x -> FieldBoundaryConditions(; x...), recursive_merge(tbbc, sobc))
-    # biogeochemistry = nothing
     biogeochemistry = OXYDEP(grid)
     boundary_conditions = merge(boundary_conditions, bgh_oxydep_boundary_conditions(biogeochemistry, grid.Nz))
     atmosphere = JRA55PrescribedAtmosphere(arch, FT;
@@ -98,6 +113,7 @@ function main()
         longitude=(10.18, 11.03),
         dir=args["atmospheric_forcing_path"],
     )
+    # atmosphere = NORA3PrescribedAtmosphere(arch)
     downwelling_radiation = Radiation(arch, FT;
         ocean_emissivity=0.96,
         ocean_albedo=0.1

@@ -1,11 +1,11 @@
-# Oslofjord simulation with FjordSim
+# Oslofjord simulation with [FjordSim](https://github.com/NIVANorge/FjordSim.jl)
 
 ## Data preparation
 
 In the preprocess folder there are Python Jupyter notebooks to make:
 - A grid file;
-- Forcing file for boundary conditions, rivers, etc.;
-- Atmospheric forcing files (todo).
+- A forcing file for boundary conditions, rivers, etc.;
+- An atmospheric forcing file can be prepared using <https://github.com/limash/atm-forcing.git>.
 
 ## Installation
 
@@ -26,6 +26,9 @@ Julia:
 
 ## Usage
 
-1. Download the [initial grid (OF160_grid_v2.nc) and atmospheric forcing files](https://www.dropbox.com/scl/fo/gc3yc155b5eohi7998wgh/AGN2Yt3HyQ0LlZGImpcca6o?rlkey=x6okc3uxe2avud6sbxgd00l14&st=093llyqp&dl=0).
+there are 2 options:
+1. Download the prepared in advance files (`bathymetry_105to232.nc, forcing_105to232.nc, JRA55 files or NORA3.nc`) from [here](https://www.dropbox.com/scl/fo/gc3yc155b5eohi7998wgh/AGN2Yt3HyQ0LlZGImpcca6o?rlkey=x6okc3uxe2avud6sbxgd00l14&st=093llyqp&dl=0) to run a simulation.
 2. Use scripts in the preprocess folder to download and prepare the bathymetry and forcing files.
-3. Run simulation `julia --project simulation.jl`
+In this case you can add rivers, other sinks and sources, change other forcing for any variable.
+
+Run simulation `julia --project simulation.jl`
