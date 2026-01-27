@@ -20,9 +20,11 @@ Python:
 
 Julia:
 1. Install julia <https://julialang.org/downloads/>.
-2. Run Julia REPL from the directory with `Project.toml` and activate the FjordsSim environment `julia --project`.
-3. Enter the Pkg REPL by pressing `]` from Julia REPL.
-4. Type `instantiate` to 'resolve' a `Manifest.toml` from a `Project.toml` to install and precompile dependency packages.
+2. Clone the repository: `git clone https://github.com/NIVANorge/oslofjord-sim.git` 
+3. Run Julia REPL from the directory with `Project.toml` and activate the environment: `julia --project`.
+4. Enter the Pkg REPL by pressing `]` from Julia REPL.
+5. Type `instantiate` to 'resolve' a `Manifest.toml` from a `Project.toml` to install and precompile dependency packages.
+(you may need to `add https://github.com/NIVANorge/FjordSim.jl.git` from Pkg REPL to install the latest FjordSim).
 
 ## Usage
 
