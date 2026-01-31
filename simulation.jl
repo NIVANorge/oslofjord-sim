@@ -4,7 +4,9 @@ using Oceananigans.Units
 using ClimaOcean
 using SeawaterPolynomials.TEOS10
 using FjordSim
+using FjordSim.FDatasets
 using ArgParse
+using Dates: DateTime
 
 include("Oxydep.jl")
 using .OXYDEPModel
@@ -73,26 +75,33 @@ function main()
     )
     momentum_advection = WENOVectorInvariant(FT)
     tracers = (:T, :S, :e, :ϵ, :C, :NUT, :P, :HET, :POM, :DOM, :O₂)
-    initial_conditions = (T = 5.0, S = 33.0, C = 0.0, NUT = 0.01, P = 0.01, HET = 0.01, O₂ = 200.0, DOM = 1.0)
-    # dataset = DSResults(
-    #     "snapshots_ocean.nc",
-    #     joinpath(homedir(), "FjordSim_results", "oslofjord");
-    #     start_date_time = DateTime(2025, 1, 1),
-    # )
-    # initial_conditions = (
-    #     T = Metadatum(:temperature; dataset, date = last_date(dataset, :temperature)),
-    #     S = Metadatum(:salinity; dataset, date = last_date(dataset, :salinity)),
-    #     u = Metadatum(
-    #         :u_velocity;
-    #         dataset,
-    #         date = last_date(dataset, :u_velocity),
-    #     ),
-    #     v = Metadatum(
-    #         :v_velocity;
-    #         dataset,
-    #         date = last_date(dataset, :v_velocity),
-    #     ),
-    # )
+    # initial_conditions = (T = 5.0, S = 33.0, C = 0.0, NUT = 0.01, P = 0.01, HET = 0.01, O₂ = 200.0, DOM = 1.0)
+    dataset = DSResults(
+        "snapshots_ocean_1.nc",
+        joinpath(homedir(), "FjordSim_results", "oslofjord");
+        start_date_time = DateTime(2025, 1, 1),
+    )
+    initial_conditions = (
+        T = Metadatum(:temperature; dataset, date = last_date(dataset, :temperature)),
+        S = Metadatum(:salinity; dataset, date = last_date(dataset, :salinity)),
+        C = Metadatum(:C; dataset, date = last_date(dataset, :C)),
+        NUT = Metadatum(:NUT; dataset, date = last_date(dataset, :NUT)),
+        P = Metadatum(:P; dataset, date = last_date(dataset, :P)),
+        HET = Metadatum(:HET; dataset, date = last_date(dataset, :HET)),
+        POM = Metadatum(:POM; dataset, date = last_date(dataset, :POM)),
+        DOM = Metadatum(:DOM; dataset, date = last_date(dataset, :DOM)),
+        O₂ = Metadatum(:O₂; dataset, date = last_date(dataset, :O₂)),
+        u = Metadatum(
+            :u_velocity;
+            dataset,
+            date = last_date(dataset, :u_velocity),
+        ),
+        v = Metadatum(
+            :v_velocity;
+            dataset,
+            date = last_date(dataset, :v_velocity),
+        ),
+    )
     free_surface = SplitExplicitFreeSurface(grid, cfl=0.7)
     coriolis = HydrostaticSphericalCoriolis(FT)
     forcing = forcing_from_file(;
@@ -108,12 +117,12 @@ function main()
     boundary_conditions = map(x -> FieldBoundaryConditions(; x...), recursive_merge(tbbc, sobc))
     biogeochemistry = OXYDEP(grid)
     boundary_conditions = merge(boundary_conditions, bgh_oxydep_boundary_conditions(biogeochemistry, grid.Nz))
-    atmosphere = JRA55PrescribedAtmosphere(arch, FT;
-        latitude=(58.98, 59.94),
-        longitude=(10.18, 11.03),
-        dir=args["atmospheric_forcing_path"],
-    )
-    # atmosphere = NORA3PrescribedAtmosphere(arch)
+    # atmosphere = JRA55PrescribedAtmosphere(arch, FT;
+    #     latitude=(58.98, 59.94),
+    #     longitude=(10.18, 11.03),
+    #     dir=args["atmospheric_forcing_path"],
+    # )
+    atmosphere = NORA3PrescribedAtmosphere(arch)
     downwelling_radiation = Radiation(arch, FT;
         ocean_emissivity=0.96,
         ocean_albedo=0.1
