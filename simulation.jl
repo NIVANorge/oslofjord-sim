@@ -14,6 +14,21 @@ using .OXYDEPModel
 const FT = Oceananigans.defaults.FloatType
 
 # ----------------------------------------------------------
+# Environment-variable helpers
+# ----------------------------------------------------------
+# const DEFAULT_GRID_PATH = joinpath(homedir(), "FjordSim_data", "oslofjord", "bathymetry_105to232.nc")
+const DEFAULT_GRID_PATH = joinpath(homedir(), "FjordSim_data", "oslofjord", "bathymetry_105to232.nc")
+const DEFAULT_FORCING_PATH = joinpath(homedir(), "FjordSim_data", "oslofjord", "forcing_105to232.nc")
+const DEFAULT_ATMOSPHERIC_FORCING_PATH = joinpath(homedir(), "FjordSim_data", "JRA55")
+const DEFAULT_RESULTS_PATH = joinpath(homedir(), "FjordSim_results", "oslofjord")
+
+"""Return ENV[var] if set and non-empty, otherwise `default`."""
+function env_or_default(var::AbstractString, default::AbstractString)::String
+    v = get(ENV, String(var), "")
+    return isempty(v) ? String(default) : v
+end
+
+# ----------------------------------------------------------
 # Command-line argument parser
 # ----------------------------------------------------------
 function parse_commandline()
@@ -22,22 +37,22 @@ function parse_commandline()
         "--grid_path"
         help = "Path to the bathymetry NetCDF file."
         arg_type = String
-        default = joinpath(homedir(), "FjordSim_data", "oslofjord", "bathymetry_105to232.nc")
+        default = env_or_default("GRID_PATH", DEFAULT_GRID_PATH)
 
         "--forcing_path"
         help = "Path to the forcing NetCDF file."
         arg_type = String
-        default = joinpath(homedir(), "FjordSim_data", "oslofjord", "forcing_105to232.nc")
+        default = env_or_default("FORCING_PATH", DEFAULT_FORCING_PATH)
 
         "--atmospheric_forcing_path"
         help = "Path to the atmospheric forcing directory."
         arg_type = String
-        default = joinpath(homedir(), "FjordSim_data", "JRA55")
+        default = env_or_default("ATMOSPHERIC_FORCING_PATH", DEFAULT_ATMOSPHERIC_FORCING_PATH)
 
         "--results_path"
         help = "Directory where results are stored."
         arg_type = String
-        default = joinpath(homedir(), "FjordSim_results", "oslofjord")
+        default = env_or_default("RESULTS_PATH", DEFAULT_RESULTS_PATH)
     end
     return parse_args(s)
 end
@@ -53,7 +68,7 @@ function main()
     println("  atmospheric_forcing_path = $(args["atmospheric_forcing_path"])")
     println("  results_path = $(args["results_path"])")
 
-    arch = GPU()
+    arch = CPU()
     grid = ImmersedBoundaryGrid(args["grid_path"], arch, (7, 7, 7))
     buoyancy = SeawaterBuoyancy(FT, equation_of_state=TEOS10EquationOfState(FT))
     closure = (
@@ -156,7 +171,7 @@ function main()
     ocean_sim = simulation.model.ocean
     ocean_model = ocean_sim.model
 
-    prefix = joinpath(results_dir, "snapshots_ocean")
+    prefix = env_or_default("SNAPSHOT_PREFIX", joinpath(results_dir, "snapshots_ocean"))
     ocean_sim.output_writers[:ocean] = NetCDFWriter(
         ocean_model,
         (
