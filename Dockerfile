@@ -1,4 +1,4 @@
-FROM europe-west1-docker.pkg.dev/niva-cd/images/fjordsim-oceananigans:ff5ca8d
+FROM europe-west1-docker.pkg.dev/niva-cd/images/fjordsim-oceananigans:c1bc5a4
 
 WORKDIR /app
 
